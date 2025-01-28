@@ -1,0 +1,21 @@
+{
+  "name": "convert-svg-to-tsx",
+  "version": "1.0.0",
+  "description": "Node script that recursively traverses folders and converts SVG files to .tsx",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@svgr/core": "^8.1.0",
+    "chalk": "^5.4.1",
+    "glob": "^11.0.1",
+    "minimist": "^1.2.8",
+    "svgo": "^3.3.2"
+  }
+}
