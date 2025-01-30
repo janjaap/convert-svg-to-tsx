@@ -14,9 +14,12 @@ process.stdout.write('\x1Bc');
 
 void (async () => {
   // 1. Find all SVG files
-  const svgFilesInBaseFolder = await getFiles();
-  const { numberOfFilesToProcess, replaceAllReferences } = await promptForInput(svgFilesInBaseFolder.length);
-  const filesToConvert = svgFilesInBaseFolder.slice(0, numberOfFilesToProcess);
+  const svgFilesInSourceFolder = await getFiles();
+
+  const { numberOfFilesToProcess, replaceAllReferences, removeAllSourceFiles } = await promptForInput(
+    svgFilesInSourceFolder.length,
+  );
+  const filesToConvert = svgFilesInSourceFolder.slice(0, numberOfFilesToProcess);
 
   const longestFileName = filesToConvert.reduce((acc, file) => (file.length > acc ? file.length : acc), 0);
   const numberOfFilesToConvert = filesToConvert.length;
@@ -76,12 +79,14 @@ void (async () => {
       replaceReferences(filePath, componentFilePath);
 
       // 7. Remove original file
-      try {
-        logger.log(`  Removing ${filePath}`);
-        unlinkSync(filePath);
-        logger.lineSuccess();
-      } catch {
-        logger.error(`  Could not remove ${filePath}\n`);
+      if (removeAllSourceFiles) {
+        try {
+          logger.log(`  Removing ${filePath}`);
+          unlinkSync(filePath);
+          logger.lineSuccess();
+        } catch {
+          logger.error(`  Could not remove ${filePath}\n`);
+        }
       }
     }
 

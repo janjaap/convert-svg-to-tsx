@@ -32,9 +32,10 @@ export function getOptimizedSvg(filePath: string, data: string) {
     optimizedData,
     {
       exportType: 'named',
+      icon: false,
       jsxRuntime: 'automatic',
       namedExport: componentName,
-      plugins: ['@svgr/plugin-svgo', '@svgr/plugin-jsx'],
+      plugins: ['@svgr/plugin-jsx'],
       typescript: true,
     },
     { componentName },

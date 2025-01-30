@@ -17,6 +17,7 @@ const getResponse = async (query: string, defaultValue: string) => {
 type PromptReturn = {
   numberOfFilesToProcess: number;
   replaceAllReferences: boolean;
+  removeAllSourceFiles: boolean;
 };
 
 export const promptForInput = async (numberOfFileCandidates: number) => {
@@ -35,6 +36,7 @@ export const promptForInput = async (numberOfFileCandidates: number) => {
     const promptReturn: PromptReturn = {
       numberOfFilesToProcess: numberOfFileCandidates,
       replaceAllReferences: true,
+      removeAllSourceFiles: true,
     };
 
     {
@@ -50,6 +52,11 @@ export const promptForInput = async (numberOfFileCandidates: number) => {
     {
       const answer = await getResponse(`Replace all references in import statements? (Y/n)`, 'Y');
       promptReturn.replaceAllReferences = questionConfirmed(answer);
+    }
+
+    {
+      const answer = await getResponse(`Remove all source files? (Y/n)`, 'Y');
+      promptReturn.removeAllSourceFiles = questionConfirmed(answer);
     }
 
     rl.close();

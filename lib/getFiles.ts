@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 import chalk from 'chalk';
 import { globSync } from 'glob';
 import minimist from 'minimist';
@@ -18,45 +19,64 @@ with their file names transformed (from snake, kebab or camel) to PascalCase.`,
   );
 }
 
+function printHowTo() {
+  logger.log(
+    `
+${chalk.white(`${chalk.bold('Usage:')}
+  node bin/svgToReact/convertSvgToReact.js --sourceFolder=<folder> [--sourceFolder=<folder>] [--excludeFolder=<folder>]`)}\n
+  Please provide at least one source folder with the --sourceFolder flag.\n`,
+    false,
+  );
+
+  process.exit(0);
+}
+
 export async function getFiles() {
-  const { baseFolder = '', excludeFolder = '' } = minimist(process.argv.slice(2));
+  const { sourceFolder = '', excludeFolder = '' } = minimist(process.argv.slice(2));
+
+  if (typeof sourceFolder !== 'string' && Array.isArray(sourceFolder) === false) {
+    printHowTo();
+  }
 
   printIntro();
 
-  if (!baseFolder) {
-    logger.log(
-      `\n
-${chalk.white(`${chalk.bold('Usage:')}
-  node bin/svgToReact/convertSvgToReact.js --baseFolder=<folder> [--excludeFolder=<folder>]`)}\n
-  Please provide a base folder with the --baseFolder flag.\n`,
-      false,
-    );
+  const sourceFolders: Array<string> = (typeof sourceFolder === 'string' ? [sourceFolder] : sourceFolder).filter(
+    Boolean,
+  );
+
+  if (!sourceFolders.length) {
+    printHowTo();
     process.exit(0);
   }
 
-  const basePath = resolve(cwd(), baseFolder);
-
-  try {
-    realpathSync(basePath);
-    logger.log(
-      `
-${chalk.white(`\nConverting files from ${basePath}
-${excludeFolder ? chalk.yellow(`Ignoring files from ${excludeFolder}`) : ''}`)}\n
+  logger.log(
+    `\n
+${excludeFolder ? chalk.yellow(`Ignoring files in ${excludeFolder}`) : ''}
 `,
-      false,
-    );
-  } catch {
-    logger.fatal(`Invalid base folder: ${baseFolder}\n`);
-    process.exit(1);
-  }
+    false,
+  );
 
-  const ignore = excludeFolder ? resolve(cwd(), excludeFolder) + '/**' : '';
-  const svgFiles = globSync(`${baseFolder}/**/*.svg`, { ignore });
+  const filesToConvert = sourceFolders.flatMap((sourceFolder) => {
+    const basePath = resolve(cwd(), sourceFolder);
 
-  if (!svgFiles.length) {
-    logger.info(chalk.green(`No SVG files found in ${baseFolder}\n`));
+    try {
+      realpathSync(basePath);
+      logger.log(`${chalk.white(`Converting files in ${basePath}`)}\n`, false);
+    } catch {
+      logger.fatal(`Invalid source folder: ${sourceFolder}\n`);
+      process.exit(1);
+    }
+
+    const ignore = excludeFolder ? resolve(cwd(), excludeFolder) + '/**' : '';
+    const svgFiles = globSync(`${sourceFolder}/**/*.svg`, { ignore });
+
+    return svgFiles;
+  });
+
+  if (!filesToConvert.length) {
+    logger.info(chalk.green(`No SVG files found in ${sourceFolders.join(', ')}\n`));
     process.exit(0);
   }
 
-  return svgFiles;
+  return filesToConvert;
 }
