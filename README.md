@@ -37,7 +37,7 @@ Specific files can be excluded from processing:
 npx tsx bin/convertSvgToReact --sourceFolder=src --excludeFolder=src/foo/bar
 ```
 
-### Multitple source folders
+### Multiple source folders
 
 ```console
 npx tsx bin/convertSvgToReact --sourceFolder=foo --sourceFolder=bar/baz
