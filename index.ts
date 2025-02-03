@@ -1,5 +1,6 @@
 import { readFileSync, unlinkSync } from 'node:fs';
 
+import { execSync } from 'node:child_process';
 import { getFiles } from './lib/getFiles';
 import { getOptimizedSvg } from './lib/getOptimizedSvg';
 import { lint } from './lib/lint';
@@ -12,22 +13,50 @@ import { storeFile } from './lib/storeFile';
 // clear the terminal window
 process.stdout.write('\x1Bc');
 
+let canLint = true;
+
 void (async () => {
   // 1. Find all SVG files
-  const svgFilesInSourceFolder = await getFiles();
+  const svgFilesInSourceFolders = await getFiles();
 
-  const { numberOfFilesToProcess, replaceAllReferences, removeAllSourceFiles } = await promptForInput(
-    svgFilesInSourceFolder.length,
+  const {
+    numberOfFilesToProcess,
+    replaceAllReferences,
+    removeAllSourceFiles,
+    eslintFix,
+    prettierWrite,
+  } = await promptForInput(svgFilesInSourceFolders.length);
+
+  if (eslintFix) {
+    try {
+      execSync('npx eslint --inspect-config', { stdio: 'ignore' });
+    } catch (error: any) {
+      logger.error('  ESLint is not installed', false);
+      canLint = false;
+    }
+  }
+
+  const filesToConvert = svgFilesInSourceFolders.slice(
+    0,
+    numberOfFilesToProcess,
   );
-  const filesToConvert = svgFilesInSourceFolder.slice(0, numberOfFilesToProcess);
 
-  const longestFileName = filesToConvert.reduce((acc, file) => (file.length > acc ? file.length : acc), 0);
+  const longestFileName = filesToConvert.reduce(
+    (acc, file) => (file.length > acc ? file.length : acc),
+    0,
+  );
   const numberOfFilesToConvert = filesToConvert.length;
 
   const getFileCounter = (index: number) =>
-    `${index.toString().padStart(numberOfFilesToConvert.toString().length, ' ')}/${numberOfFilesToConvert}`;
+    `${index
+      .toString()
+      .padStart(
+        numberOfFilesToConvert.toString().length,
+        ' ',
+      )}/${numberOfFilesToConvert}`;
 
-  const getProgress = (index: number) => ((index / numberOfFilesToConvert) * 100).toFixed(1);
+  const getProgress = (index: number) =>
+    ((index / numberOfFilesToConvert) * 100).toFixed(1);
 
   filesToConvert.forEach((filePath, index) => {
     const currentFileIndex = index + 1;
@@ -48,13 +77,18 @@ void (async () => {
       data = readFileSync(filePath, 'utf8');
     } catch (readEror: any) {
       if (readEror) {
-        logger.error(`  Cannot read file. ${filePath} needs to be converted manually.`);
+        logger.error(
+          `  Cannot read file. ${filePath} needs to be converted manually.`,
+        );
         return;
       }
     }
 
     // 2. Map the original file data to a React component template
-    const { content, componentFilePath, filename } = getOptimizedSvg(filePath, data!);
+    const { content, componentFilePath, filename } = getOptimizedSvg(
+      filePath,
+      data!,
+    );
 
     // 3. Store the new React component
     try {
@@ -64,15 +98,20 @@ void (async () => {
       return;
     }
 
-    // 4. Format new file with Prettier
-    try {
-      prettify(componentFilePath);
-    } catch {
-      logger.error(`  Could not prettify\n`);
+    if (prettierWrite) {
+      // 4. Format new file with Prettier
+      try {
+        prettify(componentFilePath);
+      } catch (prettifyError: any) {
+        console.log(prettifyError);
+        logger.error(`  Could not prettify\n`);
+      }
     }
 
-    // 5. Fix linter issues
-    lint(componentFilePath);
+    if (canLint && eslintFix) {
+      // 5. Fix linter issues
+      lint(componentFilePath);
+    }
 
     if (replaceAllReferences) {
       // 6. Find all file references and replace them with the new file

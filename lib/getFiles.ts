@@ -5,6 +5,7 @@ import minimist from 'minimist';
 import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { cwd } from 'node:process';
+import { getSourceFolders } from './getSourceFolders';
 import { logger } from './logger';
 
 function printIntro() {
@@ -32,51 +33,49 @@ ${chalk.white(`${chalk.bold('Usage:')}
 }
 
 export async function getFiles() {
-  const { sourceFolder = '', excludeFolder = '' } = minimist(process.argv.slice(2));
+  try {
+    const sourceFolders = getSourceFolders();
+    const { excludeFolder } = minimist(process.argv.slice(2));
 
-  if (typeof sourceFolder !== 'string' && Array.isArray(sourceFolder) === false) {
-    printHowTo();
-  }
-
-  printIntro();
-
-  const sourceFolders: Array<string> = (typeof sourceFolder === 'string' ? [sourceFolder] : sourceFolder).filter(
-    Boolean,
-  );
-
-  if (!sourceFolders.length) {
-    printHowTo();
-    process.exit(0);
-  }
-
-  logger.log(
-    `\n
+    if (excludeFolder) {
+      logger.log(
+        `\n
 ${excludeFolder ? chalk.yellow(`Ignoring files in ${excludeFolder}`) : ''}
 `,
-    false,
-  );
-
-  const filesToConvert = sourceFolders.flatMap((sourceFolder) => {
-    const basePath = resolve(cwd(), sourceFolder);
-
-    try {
-      realpathSync(basePath);
-      logger.log(`${chalk.white(`Converting files in ${basePath}`)}\n`, false);
-    } catch {
-      logger.fatal(`Invalid source folder: ${sourceFolder}\n`);
-      process.exit(1);
+        false,
+      );
     }
 
-    const ignore = excludeFolder ? resolve(cwd(), excludeFolder) + '/**' : '';
-    const svgFiles = globSync(`${sourceFolder}/**/*.svg`, { ignore });
+    const filesToConvert = sourceFolders.flatMap((sourceFolder) => {
+      const basePath = resolve(cwd(), sourceFolder);
 
-    return svgFiles;
-  });
+      try {
+        realpathSync(basePath);
+        logger.log(
+          `${chalk.white(`Converting files in ${basePath}`)}\n`,
+          false,
+        );
+      } catch {
+        logger.fatal(`Invalid source folder: ${sourceFolder}\n`);
+        process.exit(1);
+      }
 
-  if (!filesToConvert.length) {
-    logger.info(chalk.green(`No SVG files found in ${sourceFolders.join(', ')}\n`));
+      const ignore = excludeFolder ? resolve(cwd(), excludeFolder) + '/**' : '';
+      const svgFiles = globSync(`${sourceFolder}/**/*.svg`, { ignore });
+
+      return svgFiles;
+    });
+
+    if (!filesToConvert.length) {
+      logger.info(
+        chalk.green(`No SVG files found in ${sourceFolders.join(', ')}\n`),
+      );
+      process.exit(0);
+    }
+
+    return filesToConvert;
+  } catch {
+    printHowTo();
     process.exit(0);
   }
-
-  return filesToConvert;
 }

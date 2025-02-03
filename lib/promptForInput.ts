@@ -3,9 +3,11 @@ import { createInterface } from 'readline';
 import { logger } from './logger';
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
-const prompt = (query: string) => new Promise<string>((resolve) => rl.question(query, resolve));
+const prompt = (query: string) =>
+  new Promise<string>((resolve) => rl.question(query, resolve));
 
-const questionConfirmed = (answer: string) => answer.toLowerCase() === 'y' || answer === '';
+const questionConfirmed = (answer: string) =>
+  answer.toLowerCase() === 'y' || answer === '';
 const getResponse = async (query: string, defaultValue: string) => {
   const answerPrompt = prompt(chalk.blueBright(query + ' '));
 
@@ -18,6 +20,8 @@ type PromptReturn = {
   numberOfFilesToProcess: number;
   replaceAllReferences: boolean;
   removeAllSourceFiles: boolean;
+  eslintFix: boolean;
+  prettierWrite: boolean;
 };
 
 export const promptForInput = async (numberOfFileCandidates: number) => {
@@ -25,7 +29,10 @@ export const promptForInput = async (numberOfFileCandidates: number) => {
     const length = numberOfFileCandidates.toString();
 
     {
-      const answer = await getResponse(`Found ${length} files. Continue? (Y/n)`, 'Y');
+      const answer = await getResponse(
+        `Found ${length} files. Continue? (Y/n)`,
+        'Y',
+      );
 
       if (!questionConfirmed(answer)) {
         rl.close();
@@ -37,26 +44,49 @@ export const promptForInput = async (numberOfFileCandidates: number) => {
       numberOfFilesToProcess: numberOfFileCandidates,
       replaceAllReferences: true,
       removeAllSourceFiles: true,
+      eslintFix: true,
+      prettierWrite: true,
     };
 
     {
-      const answer = await getResponse(`How many files do you want to convert? [${length}]`, length);
+      const answer = await getResponse(
+        `How many files do you want to convert? [${length}]`,
+        length,
+      );
       const processAmount = parseInt(answer, 10);
 
       if (!isNaN(processAmount)) {
         promptReturn.numberOfFilesToProcess =
-          processAmount > numberOfFileCandidates ? numberOfFileCandidates : processAmount;
+          processAmount > numberOfFileCandidates
+            ? numberOfFileCandidates
+            : processAmount;
       }
     }
 
     {
-      const answer = await getResponse(`Replace all references in import statements? (Y/n)`, 'Y');
+      const answer = await getResponse(
+        `Replace all references in import statements? (Y/n)`,
+        'Y',
+      );
       promptReturn.replaceAllReferences = questionConfirmed(answer);
     }
 
     {
-      const answer = await getResponse(`Remove all source files? (Y/n)`, 'Y');
+      const answer = await getResponse(
+        `Remove all source files afterwards? (Y/n)`,
+        'Y',
+      );
       promptReturn.removeAllSourceFiles = questionConfirmed(answer);
+    }
+
+    {
+      const answer = await getResponse(`Run \`eslint --fix\`? (Y/n)`, 'Y');
+      promptReturn.eslintFix = questionConfirmed(answer);
+    }
+
+    {
+      const answer = await getResponse(`Run \`prettier --write\`? (Y/n)`, 'Y');
+      promptReturn.prettierWrite = questionConfirmed(answer);
     }
 
     rl.close();
